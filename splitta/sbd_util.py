@@ -1,32 +1,38 @@
 import re, pickle, os, gzip, sys, math
 
+
 def save_pickle(data, path):
-    o = gzip.open(path, 'wb')
+    o = gzip.open(path, "wb")
     pickle.dump(data, o)
     o.close()
 
-ZCAT = 'gzcat' if 'Darwin' in os.popen('uname -a').read().split() else 'zcat'
+
+ZCAT = "gzcat" if "Darwin" in os.popen("uname -a").read().split() else "zcat"
+
 
 def load_pickle(path):
-    #i = gzip.open(path, 'rb')
-    i = os.popen(ZCAT + ' ' + path)
+    # i = gzip.open(path, 'rb')
+    i = os.popen(ZCAT + " " + path)
     data = pickle.load(i)
     i.close()
     return data
 
+
 def die(msg):
-    print('\nERROR: %s' %msg)
+    print("\nERROR: %s" % msg)
     sys.exit()
 
+
 def logit(x, y=1):
-    return 1.0 / (1 + math.e ** (-1*y*x))
+    return 1.0 / (1 + math.e ** (-1 * y * x))
+
 
 def get_files(path, pattern):
     """
     Recursively find all files rooted in <path> that match the regexp <pattern>
     """
     L = []
-    
+
     # base case: path is just a file
     if (re.match(pattern, os.path.basename(path)) != None) and os.path.isfile(path):
         L.append(path)
@@ -42,79 +48,80 @@ def get_files(path, pattern):
         if (re.search(pattern, os.path.basename(item)) != None) and os.path.isfile(item):
             L.append(item)
         elif os.path.isdir(path):
-            L.extend(get_files(item + '/', pattern))
+            L.extend(get_files(item + "/", pattern))
 
     return L
 
+
 class Counter(dict):
+    def __getitem__(self, entry):
+        try:
+            return dict.__getitem__(self, entry)
+        except KeyError:
+            return 0.0
 
-   def __getitem__(self, entry):
-       try:
-           return dict.__getitem__(self, entry)
-       except KeyError:
-           return 0.0
+    def copy(self):
+        return Counter(dict.copy(self))
 
-   def copy(self):
-       return Counter(dict.copy(self))
-
-   def __add__(self, counter):
-       """
+    def __add__(self, counter):
+        """
        Add two counters together in obvious manner.
        """
-       newCounter = Counter()
-       for entry in set(self).union(counter):
-           newCounter[entry] = self[entry] + counter[entry]
-       return newCounter
+        newCounter = Counter()
+        for entry in set(self).union(counter):
+            newCounter[entry] = self[entry] + counter[entry]
+        return newCounter
 
-   def sortedKeys(self):
-       """
+    def sortedKeys(self):
+        """
        returns a list of keys sorted by their values
        keys with the highest values will appear first
        """
-       sortedItems = list(self.items())
-       compare = lambda x,y: sign(y[1] - x[1])
-       sortedItems.sort(cmp=compare)
-       return [x[0] for x in sortedItems]
+        sortedItems = list(self.items())
+        compare = lambda x, y: sign(y[1] - x[1])
+        sortedItems.sort(cmp=compare)
+        return [x[0] for x in sortedItems]
 
-   def totalCount(self):
-       """
+    def totalCount(self):
+        """
        returns the sum of counts for all keys
        """
-       return sum(self.values())
+        return sum(self.values())
 
-   def incrementAll(self, value=1):
-       """
+    def incrementAll(self, value=1):
+        """
        increment all counts by value
        helpful for removing 0 probs
        """
-       for key in list(self.keys()):
-           self[key] += value
+        for key in list(self.keys()):
+            self[key] += value
 
-   def display(self):
-       """
+    def display(self):
+        """
        a nicer display than the built-in dict.__repr__
        """
-       for key, value in list(self.items()):
-           s = str(key) + ': ' + str(value)
-           print(s)
+        for key, value in list(self.items()):
+            s = str(key) + ": " + str(value)
+            print(s)
 
-   def displaySorted(self, N=10):
-       """
+    def displaySorted(self, N=10):
+        """
        display sorted by decreasing value
        """
-       sortedKeys = self.sortedKeys()
-       for key in sortedKeys[:N]:
-           s = str(key) + ': ' + str(self[key])
-           print(s)
+        sortedKeys = self.sortedKeys()
+        for key in sortedKeys[:N]:
+            s = str(key) + ": " + str(self[key])
+            print(s)
+
 
 def normalize(counter):
-   """
+    """
    normalize a counter by dividing each value by the sum of all values
    """
-   counter = Counter(counter)
-   normalizedCounter = Counter()
-   total = float(counter.totalCount())
-   for key in list(counter.keys()):
-       value = counter[key]
-       normalizedCounter[key] = value / total
-   return normalizedCounter
+    counter = Counter(counter)
+    normalizedCounter = Counter()
+    total = float(counter.totalCount())
+    for key in list(counter.keys()):
+        value = counter[key]
+        normalizedCounter[key] = value / total
+    return normalizedCounter
