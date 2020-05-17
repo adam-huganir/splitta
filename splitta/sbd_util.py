@@ -1,8 +1,8 @@
-import re, cPickle, os, gzip, sys, math
+import re, pickle, os, gzip, sys, math
 
 def save_pickle(data, path):
     o = gzip.open(path, 'wb')
-    cPickle.dump(data, o)
+    pickle.dump(data, o)
     o.close()
 
 ZCAT = 'gzcat' if 'Darwin' in os.popen('uname -a').read().split() else 'zcat'
@@ -10,12 +10,12 @@ ZCAT = 'gzcat' if 'Darwin' in os.popen('uname -a').read().split() else 'zcat'
 def load_pickle(path):
     #i = gzip.open(path, 'rb')
     i = os.popen(ZCAT + ' ' + path)
-    data = cPickle.load(i)
+    data = pickle.load(i)
     i.close()
     return data
 
 def die(msg):
-    print '\nERROR: %s' %msg
+    print('\nERROR: %s' %msg)
     sys.exit()
 
 def logit(x, y=1):
@@ -71,7 +71,7 @@ class Counter(dict):
        returns a list of keys sorted by their values
        keys with the highest values will appear first
        """
-       sortedItems = self.items()
+       sortedItems = list(self.items())
        compare = lambda x,y: sign(y[1] - x[1])
        sortedItems.sort(cmp=compare)
        return [x[0] for x in sortedItems]
@@ -87,16 +87,16 @@ class Counter(dict):
        increment all counts by value
        helpful for removing 0 probs
        """
-       for key in self.keys():
+       for key in list(self.keys()):
            self[key] += value
 
    def display(self):
        """
        a nicer display than the built-in dict.__repr__
        """
-       for key, value in self.items():
+       for key, value in list(self.items()):
            s = str(key) + ': ' + str(value)
-           print s
+           print(s)
 
    def displaySorted(self, N=10):
        """
@@ -105,7 +105,7 @@ class Counter(dict):
        sortedKeys = self.sortedKeys()
        for key in sortedKeys[:N]:
            s = str(key) + ': ' + str(self[key])
-           print s
+           print(s)
 
 def normalize(counter):
    """
@@ -114,7 +114,7 @@ def normalize(counter):
    counter = Counter(counter)
    normalizedCounter = Counter()
    total = float(counter.totalCount())
-   for key in counter.keys():
+   for key in list(counter.keys()):
        value = counter[key]
        normalizedCounter[key] = value / total
    return normalizedCounter

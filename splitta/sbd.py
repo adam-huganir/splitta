@@ -1,5 +1,5 @@
 import re, sys, os, math, tempfile, collections
-import sbd_util, word_tokenize
+from . import sbd_util, word_tokenize
 
 """
 Utilities for disambiguating sentence boundaries
@@ -47,7 +47,7 @@ def get_features(frag, model):
     words1 = clean(frag.tokenized).split()
     if not words1: w1 = ''
     else: w1 = words1[-1]
-    if frag.next:
+    if frag.__next__:
         words2 = clean(frag.next.tokenized).split()
         if not words2: w2 = ''
         else: w2 = words2[0]
@@ -302,10 +302,10 @@ class NB_Model(Model):
 
         frag = doc.frag
         while frag:
-            for feat, val in frag.features.items():
+            for feat, val in list(frag.features.items()):
                 feats[frag.label][feat + '_' + val] += 1
             totals[frag.label] += len(frag.features)
-            frag = frag.next
+            frag = frag.__next__
 
         ## add-1 smoothing and normalization
         sys.stderr.write('smoothing... ')
@@ -326,7 +326,7 @@ class NB_Model(Model):
         ## the prior is weird, but it works better this way, consistently
         probs = sbd_util.Counter([(label, self.feats[label, '<prior>']**4) for label in [0,1]])
         for label in probs:
-            for feat, val in frag.features.items():
+            for feat, val in list(frag.features.items()):
                 key = (label, feat + '_' + val)
                 if not key in self.feats: continue
                 probs[label] *= self.feats[key]
@@ -340,7 +340,7 @@ class NB_Model(Model):
         while frag:
             pred = self.classify_nb_one(frag)
             frag.pred = pred
-            frag = frag.next
+            frag = frag.__next__
         if verbose: sys.stderr.write('done!\n')
 
 class SVM_Model(Model):
@@ -361,10 +361,10 @@ class SVM_Model(Model):
         feat_list = set()
         frag = doc.frag
         while frag:
-            feats = [f+'_'+v for f,v in frag.features.items()]
+            feats = [f+'_'+v for f,v in list(frag.features.items())]
             for feat in feats: feat_list.add(feat)
-            frag = frag.next
-        self.feats = dict(zip(feat_list, range(1,len(feat_list)+1)))
+            frag = frag.__next__
+        self.feats = dict(list(zip(feat_list, list(range(1,len(feat_list)+1)))))
 
         ## training data file
         sys.stderr.write('writing... ')
@@ -376,12 +376,12 @@ class SVM_Model(Model):
             elif frag.label < 0.5: svm_label = '-1'
             else: continue
             line = '%s ' %svm_label
-            feats = [f+'_'+v for f,v in frag.features.items()]
+            feats = [f+'_'+v for f,v in list(frag.features.items())]
             svm_feats = [self.feats[f] for f in feats]
             svm_feats.sort(lambda x,y: x-y)
             line += ' '.join(['%d:1' %x for x in svm_feats])
             lines.append(line)
-            frag = frag.next
+            frag = frag.__next__
 
         unused, train_file = tempfile.mkstemp()
         fh = open(train_file, 'w')
@@ -413,12 +413,12 @@ class SVM_Model(Model):
             elif frag.label: svm_label = '+1'
             else: svm_label = '-1'
             line = '%s ' %svm_label
-            feats = [f+'_'+v for f,v in frag.features.items()]
+            feats = [f+'_'+v for f,v in list(frag.features.items())]
             svm_feats = [self.feats[f] for f in feats if f in self.feats]
             svm_feats.sort(lambda x,y: x-y)
             line += ' '.join(['%d:1' %x for x in svm_feats])
             lines.append(line)
-            frag = frag.next
+            frag = frag.__next__
 
         testfd, test_file = tempfile.mkstemp()
         fh = open(test_file, 'w')
@@ -433,11 +433,11 @@ class SVM_Model(Model):
 
         ## get predictions
         total = 0
-        preds = map(float, open(pred_file).read().splitlines())
+        preds = list(map(float, open(pred_file).read().splitlines()))
         frag = doc.frag
         while frag:
             frag.pred = sbd_util.logit(preds[total])
-            frag = frag.next
+            frag = frag.__next__
             total += 1
 
         ## clean up
@@ -472,7 +472,7 @@ class Doc:
                 if word.replace('.', '').isalpha():
                     if word.islower(): lower_words[word.replace('.','')] += 1
                     if not word.endswith('.'): non_abbrs[word] += 1
-            frag = frag.next
+            frag = frag.__next__
 
         if verbose: sys.stderr.write('lowercased [%d] non-abbrs [%d]\n'
                                      %(len(lower_words), len(non_abbrs)))
@@ -484,7 +484,7 @@ class Doc:
         frag = self.frag
         while frag:
             frag.features = get_features(frag, model)
-            frag = frag.next
+            frag = frag.__next__
         if verbose: sys.stderr.write('done!\n')
 
     def segment(self, use_preds=False, tokenize=False, output=None, list_only=False):
@@ -508,7 +508,7 @@ class Doc:
                 elif not list_only: sys.stdout.write(sent_text + spacer)
                 sents.append(sent_text)
                 sent = []
-            frag = frag.next
+            frag = frag.__next__
         return sents
 
     def show_results(self, verbose=False):
@@ -522,15 +522,15 @@ class Doc:
                 correct += 1
             else:
                 w1 = ' '.join(frag.tokenized.split()[-2:])
-                if frag.next: w2 = ' '.join(frag.next.tokenized.split()[:2])
+                if frag.__next__: w2 = ' '.join(frag.next.tokenized.split()[:2])
                 else: w2 = '<EOF>'
                 if verbose:
-                    print '[%d] [%1.4f] %s?? %s' %(frag.label, frag.pred, w1, w2)
+                    print('[%d] [%1.4f] %s?? %s' %(frag.label, frag.pred, w1, w2))
 
-            frag = frag.next
+            frag = frag.__next__
 
         error = 1 - (1.0 * correct / total)
-        print 'correct [%d] total [%d] error [%1.4f]' %(correct, total, error)
+        print('correct [%d] total [%d] error [%1.4f]' %(correct, total, error))
         
 class Frag:
     """
