@@ -1,0 +1,46 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+default_language_version:
+  python: python3.8
+
+default_stages: [commit]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.1.0
+    hooks:
+      - id: check-added-large-files
+      - id: check-yaml
+      - id: detect-aws-credentials
+      - id: detect-private-key
+      - id: debug-statements
+      - id: requirements-txt-fixer
+  - repo: https://github.com/asottile/dead
+    rev: master
+    hooks:
+      - id: dead
+  - repo: https://gitlab.com/pycqa/flake8
+    rev: master
+    hooks:
+      - id: flake8
+        verbose: true
+  - repo: https://github.com/ambv/black
+    rev: master
+    hooks:
+    - id: black
+      language_version: python3.8
+  - repo: local
+    hooks:
+      -
+        id: jupytext
+        name: jupytext
+        entry: jupytext --from ipynb --to md --pre-commit
+        pass_filenames: false
+        language: python
+      -
+        id: unstage-ipynb
+        name: unstage-ipynb
+        entry: git reset HEAD **/*.ipynb
+        pass_filenames: false
+        language: system
+    
